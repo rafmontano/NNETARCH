@@ -1,52 +1,74 @@
+NNETARCH
+================
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# NNETARCH
+# NNETARCH <img src="man/figures/logo.png" align="right" height="120"/>
 
-<!-- badges: start -->
-<!-- badges: end -->
+**Neural Network Autoregressive Conditional Heteroskedasticity for Time
+Series Forecasting**
 
-The goal of NNETARCH is to …
+NNETARCH provides a hybrid forecasting model that combines nonlinear
+autoregression via neural networks (`nnetar`) with conditional variance
+modeling (volatility) using either another `nnetar` model or a
+GARCH(1,1) process.
+
+This extends the `forecast` package to support variance-adaptive models.
+
+------------------------------------------------------------------------
 
 ## Installation
 
-You can install the development version of NNETARCH from
-[GitHub](https://github.com/) with:
+Install the development version of NNETARCH from GitHub:
 
 ``` r
-# install.packages("pak")
-pak::pak("rafmontano/NNETARCH")
+# install.packages("devtools")
+devtools::install_github("rafmontano/NNETARCH")
 ```
+
+------------------------------------------------------------------------
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
-
 ``` r
-#library(NNETARCH)
-## basic example code
+library(forecast)
+library(NNETARCH)
+
+fit <- nnetarch(lynx, h = 14)
+fct <- forecast(fit)
+plot(fct)
 ```
 
-What is special about using `README.Rmd` instead of just `README.md`?
-You can include R chunks like so:
+### Forecast Output
 
-``` r
-summary(cars)
-#>      speed           dist       
-#>  Min.   : 4.0   Min.   :  2.00  
-#>  1st Qu.:12.0   1st Qu.: 26.00  
-#>  Median :15.0   Median : 36.00  
-#>  Mean   :15.4   Mean   : 42.98  
-#>  3rd Qu.:19.0   3rd Qu.: 56.00  
-#>  Max.   :25.0   Max.   :120.00
-```
+![](man/figures/lynx_nnetarch.png)
 
-You’ll still need to render `README.Rmd` regularly, to keep `README.md`
-up-to-date. `devtools::build_readme()` is handy for this.
+------------------------------------------------------------------------
 
-You can also embed plots, for example:
+## The NNETARCH framework - Architecture
 
-<img src="man/figures/README-pressure-1.png" width="100%" />
+The NNETARCH framework combines a trend model and a volatility model
+into a unified forecasting strategy:
 
-In that case, don’t forget to commit and push the resulting figure
-files, so they display on GitHub and CRAN.
+![](man/figures/nnetarch_figure1.png)
+
+------------------------------------------------------------------------
+
+## Model Description
+
+The NNETARCH model is defined as:
+
+`y_t = f(y_{t-1}, ..., y_{t-p}) + g(e_{t-1}, ..., e_{t-q}) * ε_t`, where
+`ε_t ~ N(0,1)`
+
+Where:
+
+- `f(.)`: Neural network for nonlinear trend  
+- `g(.)`: Volatility model (neural network or GARCH)  
+- `ε_t`: White noise innovation
+
+## License
+
+MIT © Rafael Montano, University of Sydney
+
+------------------------------------------------------------------------
