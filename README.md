@@ -3,10 +3,10 @@ NNETARCH
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# NNETARCH <img src="man/figures/logo.png" align="right" height="120"/>
+# <img src="man/figures/logo.png" align="right" height="120"/>
 
-**Neural Network Autoregressive Conditional Heteroskedasticity for Time
-Series Forecasting**
+**NNETARCH: Neural Network Autoregressive Conditional Heteroskedasticity
+for Time Series Forecasting**
 
 NNETARCH provides a hybrid forecasting model that combines nonlinear
 autoregression via neural networks (`nnetar`) with conditional variance
