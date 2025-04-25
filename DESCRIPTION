@@ -1,11 +1,19 @@
 Package: NNETARCH
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9000
+Title: Neural Network Autoregressive Conditional Heteroskedasticity for Time Series Forecasting
+Version: 0.0.1
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+    person("Rafael", "Montano", email = "rafael.montano@sydney.edu.au", role = c("aut", "cre"))
+Description: Implements a hybrid forecasting model combining nonlinear autoregression via neural networks (NNETAR) with volatility modeling using either GARCH or neural network-based residual modeling. This package extends the 'forecast' package functionality to provide variance-adaptive forecasting models for financial and economic time series.
+License: MIT
 Encoding: UTF-8
+LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.0.0
+RoxygenNote: 7.3.2
+Imports:
+    forecast,
+    rugarch,
+    stats
+Suggests:
+    ggplot2,
+    tsibble,
+    testthat
