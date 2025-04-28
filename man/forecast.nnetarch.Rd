@@ -11,11 +11,13 @@
 
 \item{h}{Number of steps ahead for forecasting.}
 
-\item{...}{Additional arguments passed to the underlying \code{forecast()} function.}
+\item{level}{Confidence levels for prediction intervals (numeric vector). Default is \code{c(80, 95)}.}
+
+\item{...}{Additional arguments passed to the underlying \code{forecast()} method.}
 }
 \value{
-An object of class \code{forecast} containing the hybrid forecast.
+An object of class \code{forecast}.
 }
 \description{
-Generates forecasts from an object of class \code{nnetarch}, which combines a NNETAR trend model and a volatility model.
+Generates forecasts from an object of class \code{nnetarch}.
 }

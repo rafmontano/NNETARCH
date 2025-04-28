@@ -4,65 +4,55 @@
 \alias{nnetarch}
 \title{Neural Network Autoregressive Model with Conditional Volatility}
 \usage{
-nnetarch(y, volatility = TRUE, ...)
+nnetarch(
+  y,
+  volatility = TRUE,
+  volatility.model = c("nnetar", "garch_nnetar"),
+  garch.control = NULL,
+  ...
+)
 }
 \arguments{
 \item{y}{A univariate time series of class \code{ts}.}
 
-\item{...}{Additional arguments passed to the underlying \code{\link[forecast]{nnetar}} function.}
+\item{volatility}{Logical. If FALSE, only trend estimation is performed. Default is TRUE.}
 
-\item{h}{Forecast horizon (number of steps ahead).}
+\item{volatility.model}{Character. "nnetar" for NNETAR residual volatility (Model 1), or "garch_nnetar" for GARCH-enhanced NNETAR modeling (Model 2). Default is "nnetar".}
 
-\item{volatility.model}{A string indicating the volatility modeling method. Either \code{"nnetar"} (default) or \code{"garch"}.}
+\item{garch.control}{A named list of parameters passed to \code{ugarchspec()} when using the \pkg{rugarch} volatility backend. Optional.}
 
-\item{p}{Number of non-seasonal lags for the NNETAR trend model (optional).}
-
-\item{q}{Reserved for future use (currently ignored).}
-
-\item{size}{Number of hidden nodes in the NNETAR trend model.}
-
-\item{repeats}{Number of repetitions for the NNETAR model with different random initializations (default: 20).}
-
-\item{lambda}{Box-Cox transformation parameter. If \code{"auto"}, it is selected automatically.}
-
-\item{simulate}{Logical. If \code{TRUE} (default), standard normal noise is added to the forecast via the volatility path.}
-
-\item{seed}{Random seed used when simulating \code{simulate = TRUE}.}
-
-\item{garch.control}{A named list of parameters passed to \code{ugarchspec()} when using the \pkg{rugarch} volatility backend.}
+\item{...}{Additional arguments passed to the underlying \code{\link[forecast]{nnetar}} function for trend modeling.}
 }
 \value{
-An object of class \code{"nnetarch"} containing the following elements:
+An object of class \code{"nnetarch"} containing:
 \describe{
-\item{\code{f_model}}{Fitted trend model from \code{nnetar()}}
-\item{\code{g_model}}{Fitted volatility model (either \code{nnetar} or \code{ugarchforecast})}
-\item{\code{mean}}{Hybrid forecast values combining trend and simulated volatility}
-\item{\code{residuals}}{Residuals from the trend model}
-\item{\code{fitted}}{Fitted values from the trend model}
-\item{\code{inputs}}{List of original inputs used in fitting the model}
+\item{\code{trend_model}}{Fitted trend model from \code{nnetar()}}
+\item{\code{vol_model}}{Fitted volatility model (either \code{nnetar} or GARCH-enhanced \code{nnetar})}
+\item{\code{x}}{Original input series}
+\item{\code{method}}{Description of the method used}
+\item{\code{volatility_model_type}}{The volatility model used ("nnetar" or "garch_nnetar")}
+\item{\code{call}}{The original function call}
 }
-
-An object of class "nnetarch".
 }
 \description{
-Fits a hybrid forecasting model that combines a nonlinear autoregressive model using a neural network (NNETAR) for the conditional mean with a second model for conditional volatility. The volatility component can be either a second NNETAR model or a GARCH(1,1) model via the \pkg{rugarch} package.
+Fits a hybrid forecasting model that combines a nonlinear autoregressive model using a neural network (NNETAR) for the conditional mean with a second model for conditional volatility. The volatility component can be either a second NNETAR model or a GARCH-enhanced NNETAR model via the \pkg{rugarch} package.
 }
 \details{
-The model forecasts the trend using a neural network autoregression (\code{nnetar}). The residuals from this model are then used to estimate volatility either by:
+The NNETARCH model forecasts the trend using a neural network autoregression (\code{nnetar}). The residuals from this model are then used to estimate volatility through two alternatives:
 \itemize{
-\item Fitting a second neural network model to squared residuals, or
-\item Fitting a GARCH(1,1) model to the residuals using the \pkg{rugarch} package.
+\item \strong{Model 1 (nnetar):} A second neural network is fitted to the squared residuals to model the variance dynamics.
+\item \strong{Model 2 (garch_nnetar):} Conditional variances are first estimated using a GARCH(1,1) model, and these are then used alongside residuals to train a second neural network.
 }
 The final forecast is computed as:
 \deqn{
 \hat{y}_{t+h} = f(y_{t-1}, \dots, y_{t-p}) + g(\cdot) \cdot \varepsilon_t
 }
-where \eqn{\varepsilon_t \sim \mathcal{N}(0, 1)} is simulated white noise and \eqn{g(\cdot)} is a forecast of the conditional standard deviation.
+where \eqn{\varepsilon_t \sim \mathcal{N}(0, 1)} is simulated white noise, and \eqn{g(\cdot)} is a learned function estimating the conditional standard deviation.
 }
 \examples{
 library(forecast)
-fit <- nnetarch(lynx, h = 14)
-plot(forecast(fit))
+fit <- nnetarch(lynx)
+plot(forecast(fit, h = 14))
 
 }
 \seealso{
