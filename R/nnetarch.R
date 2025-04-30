@@ -61,7 +61,7 @@ nnetarch <- function(y, volatility = TRUE,
       # ✅ Original behavior
       res_sq <- residuals^2
       res_sq <- res_sq[is.finite(res_sq)]
-      vol_model <- forecast::nnetar(res_sq)
+      vol_model <- forecast::nnetar(res_sq, ...)
 
     } else if (volatility.model == "garch_nnetar") {
       # 🆕 New behavior: GARCH-enhanced NNETAR
@@ -105,7 +105,7 @@ nnetarch <- function(y, volatility = TRUE,
         # Input matrix: [residuals, garch variances]
         inputs_mat <- cbind(residuals_clean, garch_variances)
 
-        vol_model <- forecast::nnetar(as.numeric(inputs_mat))
+        vol_model <- forecast::nnetar(as.numeric(inputs_mat), ...)
       }
     }
   }
