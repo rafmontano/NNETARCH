@@ -145,8 +145,9 @@ forecast.nnetarch <- function(object, h = 10, level = c(80, 95), ...) {
     set.seed(123)
     epsilon <- rnorm(h, mean = 0, sd = 1)
 
-    # Calculate volatility term
-    vol_term <- sqrt(vol_fc$mean) * epsilon
+    # Safely compute volatility (avoid NaNs from negative values)
+    vol_mean <- pmax(vol_fc$mean, 1e-6)
+    vol_term <- sqrt(vol_mean) * epsilon
     vol_term_ts <- ts(vol_term,
                       start = start(trend_fc$mean),
                       frequency = frequency(trend_fc$mean))
@@ -161,7 +162,7 @@ forecast.nnetarch <- function(object, h = 10, level = c(80, 95), ...) {
   }
 
   # Step 3: Compute prediction intervals using volatility estimates
-  sigma_h <- if (!is.null(vol_fc)) sqrt(vol_fc$mean) else rep(0, h)
+  sigma_h <- if (!is.null(vol_fc)) sqrt(pmax(vol_fc$mean, 1e-6)) else rep(0, h)
   mean_fc <- as.numeric(trend_fc$mean)
   level <- sort(level)
   z_vals <- qnorm(1 - (1 - level / 100) / 2)
