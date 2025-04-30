@@ -161,14 +161,15 @@ forecast.nnetarch <- function(object, h = 10, level = c(80, 95), ...) {
                     start = start(trend_fc$mean),
                     frequency = frequency(trend_fc$mean))
 
-  # Step 5: Compute prediction intervals using volatility estimates
-  sigma_h <- sqrt(pmax(vol_fc$mean, 1e-6))
+  # Step 5: Compute prediction intervals using accumulated volatility
+  sigma_raw <- sqrt(pmax(vol_fc$mean, 1e-6))
+  sigma_accum <- sqrt(cumsum(sigma_raw^2))  # Cumulative uncertainty like ARIMA/ETS
   mean_fc <- as.numeric(trend_fc$mean)
   level <- sort(level)
   z_vals <- qnorm(1 - (1 - level / 100) / 2)
 
-  lower <- sapply(z_vals, function(z) mean_fc - z * sigma_h)
-  upper <- sapply(z_vals, function(z) mean_fc + z * sigma_h)
+  lower <- sapply(z_vals, function(z) mean_fc - z * sigma_accum)
+  upper <- sapply(z_vals, function(z) mean_fc + z * sigma_accum)
 
   # Convert to time series objects
   lower_ts <- ts(lower, start = start(trend_fc$mean), frequency = frequency(trend_fc$mean))
