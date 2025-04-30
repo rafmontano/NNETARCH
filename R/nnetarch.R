@@ -134,35 +134,35 @@ nnetarch <- function(y, volatility = TRUE,
 #' @method forecast nnetarch
 #' @export
 forecast.nnetarch <- function(object, h = 10, level = c(80, 95), ...) {
-  # Step 1: Forecast the trend component
-  trend_fc <- forecast::forecast(object$trend_model, h = h, level = level, ...)
-
-  # Step 2: Forecast the volatility component (if present)
-  if (!is.null(object$vol_model)) {
-    vol_fc <- forecast::forecast(object$vol_model, h = h, ...)
-
-    # Simulate standard normal noise
-    set.seed(123)
-    epsilon <- rnorm(h, mean = 0, sd = 1)
-
-    # Safely compute volatility (avoid NaNs from negative values)
-    vol_mean <- pmax(vol_fc$mean, 1e-6)
-    vol_term <- sqrt(vol_mean) * epsilon
-    vol_term_ts <- ts(vol_term,
-                      start = start(trend_fc$mean),
-                      frequency = frequency(trend_fc$mean))
-
-    # Hybrid forecast: combine trend and volatility
-    hybrid_mean <- ts(trend_fc$mean + vol_term_ts,
-                      start = start(trend_fc$mean),
-                      frequency = frequency(trend_fc$mean))
-  } else {
-    hybrid_mean <- trend_fc$mean
-    vol_fc <- NULL
+  # Step 1: If no volatility model, defer completely to the trend model forecast
+  if (is.null(object$vol_model)) {
+    return(forecast::forecast(object$trend_model, h = h, level = level, ...))
   }
 
-  # Step 3: Compute prediction intervals using volatility estimates
-  sigma_h <- if (!is.null(vol_fc)) sqrt(pmax(vol_fc$mean, 1e-6)) else rep(0, h)
+  # Step 2: Forecast the trend component
+  trend_fc <- forecast::forecast(object$trend_model, h = h, level = level, ...)
+
+  # Step 3: Forecast the volatility component
+  vol_fc <- forecast::forecast(object$vol_model, h = h, ...)
+
+  # Simulate standard normal noise
+  set.seed(123)
+  epsilon <- rnorm(h, mean = 0, sd = 1)
+
+  # Safely compute volatility (avoid NaNs from negative values)
+  vol_mean <- pmax(vol_fc$mean, 1e-6)
+  vol_term <- sqrt(vol_mean) * epsilon
+  vol_term_ts <- ts(vol_term,
+                    start = start(trend_fc$mean),
+                    frequency = frequency(trend_fc$mean))
+
+  # Step 4: Combine trend and volatility into hybrid forecast
+  hybrid_mean <- ts(trend_fc$mean + vol_term_ts,
+                    start = start(trend_fc$mean),
+                    frequency = frequency(trend_fc$mean))
+
+  # Step 5: Compute prediction intervals using volatility estimates
+  sigma_h <- sqrt(pmax(vol_fc$mean, 1e-6))
   mean_fc <- as.numeric(trend_fc$mean)
   level <- sort(level)
   z_vals <- qnorm(1 - (1 - level / 100) / 2)
@@ -174,7 +174,7 @@ forecast.nnetarch <- function(object, h = 10, level = c(80, 95), ...) {
   lower_ts <- ts(lower, start = start(trend_fc$mean), frequency = frequency(trend_fc$mean))
   upper_ts <- ts(upper, start = start(trend_fc$mean), frequency = frequency(trend_fc$mean))
 
-  # Step 4: Return a valid forecast object (class = "forecast")
+  # Step 6: Return a valid forecast object (class = "forecast")
   structure(list(
     method = "NNETARCH",
     model = object,
