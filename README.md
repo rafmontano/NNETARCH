@@ -155,3 +155,12 @@ series.
 MIT © Rafael Montano, University of Sydney
 
 ------------------------------------------------------------------------
+
+## Dedication
+
+This work is dedicated to the memory of **Francisco Jose Avila Fuenmayor
+(“Franco”)**,  
+who was like a father to me when I needed one most.  
+His strength, generosity, and quiet guidance inspired this journey.
+
+------------------------------------------------------------------------

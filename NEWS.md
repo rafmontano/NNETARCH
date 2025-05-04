@@ -2,6 +2,7 @@
 
 ## Version 0.0.3 (2025-05-05)
 
+-   This release is dedicated to the memory of Francisco Jose Avila Fuenmayor ("Franco").
 -   Added support for dual confidence interval schemes in `forecast.nnetarch()`:
     -   Standard `forecast`-style intervals (default).
     -   Optional `garch_confint = TRUE` for GARCH-style intervals based on conditional volatility.
