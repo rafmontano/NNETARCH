@@ -123,18 +123,30 @@ nnetarch <- function(y, volatility = TRUE,
 
 #' Forecast Method for NNETARCH Objects
 #'
-#' Generates forecasts from an object of class \code{nnetarch}.
+#' Generates forecasts from an object of class \code{nnetarch}, combining trend and volatility forecasts.
+#' The user may choose between forecast-style cumulative variance prediction intervals (default)
+#' and GARCH-style conditional variance intervals.
 #'
 #' @param object An object of class \code{nnetarch}.
 #' @param h Number of steps ahead for forecasting.
 #' @param level Confidence levels for prediction intervals (numeric vector). Default is \code{c(80, 95)}.
-#' @param ... Additional arguments passed to the underlying \code{forecast()} method.
+#' @param garch_confint Logical. If \code{TRUE}, uses GARCH-style prediction intervals based on conditional volatility.
+#'                       If \code{FALSE} (default), uses cumulative variance for prediction intervals as in ETS/ARIMA.
+#' @param ... Additional arguments passed to the underlying \code{forecast()} methods.
 #'
-#' @return An object of class \code{forecast}.
+#' @return An object of class \code{forecast}, containing the forecast mean, intervals, and metadata.
+#'
+#' @examples
+#' \dontrun{
+#' fit <- nnetarch(y)
+#' forecast(fit, h = 12)  # default intervals
+#' forecast(fit, h = 12, garch_confint = TRUE)  # conditional variance intervals
+#' }
+#'
 #' @method forecast nnetarch
 #' @export
-forecast.nnetarch <- function(object, h = 10, level = c(80, 95), ...) {
-  # Step 1: If no volatility model, defer completely to the trend model forecast
+forecast.nnetarch <- function(object, h = 10, level = c(80, 95), garch_confint = FALSE, ...) {
+  # Step 1: If no volatility model, defer to trend model
   if (is.null(object$vol_model)) {
     return(forecast::forecast(object$trend_model, h = h, level = level, ...))
   }
@@ -145,37 +157,41 @@ forecast.nnetarch <- function(object, h = 10, level = c(80, 95), ...) {
   # Step 3: Forecast the volatility component
   vol_fc <- forecast::forecast(object$vol_model, h = h, ...)
 
-  # Simulate standard normal noise
+  # Step 4: Simulate normal noise and scale by volatility
   set.seed(123)
   epsilon <- rnorm(h, mean = 0, sd = 1)
-
-  # Safely compute volatility (avoid NaNs from negative values)
-  vol_mean <- pmax(vol_fc$mean, 1e-6)
+  vol_mean <- pmax(vol_fc$mean, 1e-6)  # prevent negatives
   vol_term <- sqrt(vol_mean) * epsilon
-  vol_term_ts <- ts(vol_term,
-                    start = start(trend_fc$mean),
-                    frequency = frequency(trend_fc$mean))
+  vol_term_ts <- ts(vol_term, start = start(trend_fc$mean), frequency = frequency(trend_fc$mean))
 
-  # Step 4: Combine trend and volatility into hybrid forecast
+  # Step 5: Combine trend and volatility
   hybrid_mean <- ts(trend_fc$mean + vol_term_ts,
                     start = start(trend_fc$mean),
                     frequency = frequency(trend_fc$mean))
 
-  # Step 5: Compute prediction intervals using accumulated volatility
-  sigma_raw <- sqrt(pmax(vol_fc$mean, 1e-6))
-  sigma_accum <- sqrt(cumsum(sigma_raw^2))  # Cumulative uncertainty like ARIMA/ETS
-  mean_fc <- as.numeric(trend_fc$mean)
+  # Step 6: Compute intervals
   level <- sort(level)
   z_vals <- qnorm(1 - (1 - level / 100) / 2)
+  mean_fc <- as.numeric(trend_fc$mean)
 
-  lower <- sapply(z_vals, function(z) mean_fc - z * sigma_accum)
-  upper <- sapply(z_vals, function(z) mean_fc + z * sigma_accum)
+  if (garch_confint) {
+    # Option 1: GARCH-style intervals (per-step conditional variance)
+    sigma <- sqrt(vol_mean)
+    lower <- sapply(z_vals, function(z) mean_fc - z * sigma)
+    upper <- sapply(z_vals, function(z) mean_fc + z * sigma)
+  } else {
+    # Option 2: Forecast-style intervals (cumulative variance)
+    sigma_raw <- sqrt(vol_mean)
+    sigma_accum <- sqrt(cumsum(sigma_raw^2))  # like ETS/ARIMA
+    lower <- sapply(z_vals, function(z) mean_fc - z * sigma_accum)
+    upper <- sapply(z_vals, function(z) mean_fc + z * sigma_accum)
+  }
 
-  # Convert to time series objects
+  # Step 7: Convert to time series objects
   lower_ts <- ts(lower, start = start(trend_fc$mean), frequency = frequency(trend_fc$mean))
   upper_ts <- ts(upper, start = start(trend_fc$mean), frequency = frequency(trend_fc$mean))
 
-  # Step 6: Return a valid forecast object (class = "forecast")
+  # Step 8: Return forecast object
   structure(list(
     method = "NNETARCH",
     model = object,

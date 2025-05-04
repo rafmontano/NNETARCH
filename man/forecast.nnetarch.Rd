@@ -4,7 +4,7 @@
 \alias{forecast.nnetarch}
 \title{Forecast Method for NNETARCH Objects}
 \usage{
-\method{forecast}{nnetarch}(object, h = 10, level = c(80, 95), ...)
+\method{forecast}{nnetarch}(object, h = 10, level = c(80, 95), garch_confint = FALSE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{nnetarch}.}
@@ -13,11 +13,24 @@
 
 \item{level}{Confidence levels for prediction intervals (numeric vector). Default is \code{c(80, 95)}.}
 
-\item{...}{Additional arguments passed to the underlying \code{forecast()} method.}
+\item{garch_confint}{Logical. If \code{TRUE}, uses GARCH-style prediction intervals based on conditional volatility.
+If \code{FALSE} (default), uses cumulative variance for prediction intervals as in ETS/ARIMA.}
+
+\item{...}{Additional arguments passed to the underlying \code{forecast()} methods.}
 }
 \value{
-An object of class \code{forecast}.
+An object of class \code{forecast}, containing the forecast mean, intervals, and metadata.
 }
 \description{
-Generates forecasts from an object of class \code{nnetarch}.
+Generates forecasts from an object of class \code{nnetarch}, combining trend and volatility forecasts.
+The user may choose between forecast-style cumulative variance prediction intervals (default)
+and GARCH-style conditional variance intervals.
+}
+\examples{
+\dontrun{
+fit <- nnetarch(y)
+forecast(fit, h = 12)  # default intervals
+forecast(fit, h = 12, garch_confint = TRUE)  # conditional variance intervals
+}
+
 }

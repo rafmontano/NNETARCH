@@ -21,6 +21,18 @@ dynamically during volatility regime shifts, extending the `forecast`
 package to support variance-adaptive modeling of financial and economic
 time series.
 
+### Confidence Intervals
+
+`forecast.nnetarch()` provides two styles of prediction intervals:
+
+- **Forecast-style intervals** (default): Matches the `forecast` package
+  by accumulating forecast uncertainty.
+- **GARCH-style intervals** (`garch_confint = TRUE`): Uses direct
+  conditional standard deviation from the volatility model, suitable for
+  ARCH/GARCH modeling.
+
+Users can switch using the `garch_confint` argument.
+
 ------------------------------------------------------------------------
 
 ## Installation
@@ -58,8 +70,12 @@ library(forecast)
 library(NNETARCH)
 
 fit <- nnetarch(lynx, h = 14, volatility.model = "garch_nnetar")
-fct <- forecast(fit)
+fct <- forecast(fit) # Default confidence interval style
 plot(fct)
+
+# Optionally use GARCH-style confidence intervals
+fct_garch <- forecast(fit, garch_confint = TRUE)
+plot(fct_garch)
 ```
 
 ### Forecast Output
