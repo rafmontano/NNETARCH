@@ -1,6 +1,6 @@
 Package: NNETARCH
 Title: Neural Network Autoregressive Conditional Heteroskedasticity for Time Series Forecasting
-Version: 0.0.3
+Version: 0.0.4
 Authors@R: 
     person("Rafael", "Montano", email = "rafael.montano@sydney.edu.au", role = c("aut", "cre"))
 Description: Implements a hybrid forecasting framework combining nonlinear autoregression via neural networks (NNETAR) with volatility modeling using either a second neural network or a GARCH(1,1) process (via the 'rugarch' package). This package extends the 'forecast' package functionality to provide variance-adaptive forecasting models for financial and economic time series.

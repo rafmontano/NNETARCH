@@ -117,7 +117,7 @@
     },
     "RcppArmadillo": {
       "Package": "RcppArmadillo",
-      "Version": "14.4.2-1",
+      "Version": "14.4.3-1",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -127,7 +127,7 @@
         "stats",
         "utils"
       ],
-      "Hash": "a59e0967c6e2cc96f0131683502ef45e"
+      "Hash": "f0b7425919d3ae040477cd6441a4f522"
     },
     "Rsolnp": {
       "Package": "Rsolnp",
@@ -208,13 +208,13 @@
     },
     "curl": {
       "Package": "curl",
-      "Version": "6.2.2",
+      "Version": "6.2.3",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
         "R"
       ],
-      "Hash": "e4f9e10b18f453a1b7eaf38247dad4fe"
+      "Hash": "f15795aaa507bf90088346a1eff6534e"
     },
     "fansi": {
       "Package": "fansi",
@@ -274,14 +274,14 @@
     },
     "generics": {
       "Package": "generics",
-      "Version": "0.1.3",
+      "Version": "0.1.4",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
         "R",
         "methods"
       ],
-      "Hash": "15e9634c0fcd294799e9b2e929ed1b86"
+      "Hash": "4b29bf698d0c7bdb9f1e4976e7ade41d"
     },
     "ggplot2": {
       "Package": "ggplot2",
@@ -372,7 +372,7 @@
     },
     "ks": {
       "Package": "ks",
-      "Version": "1.15.0",
+      "Version": "1.15.1",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -387,7 +387,7 @@
         "mvtnorm",
         "pracma"
       ],
-      "Hash": "cea7126b2a4932da018dc62f70b01fb4"
+      "Hash": "3c1ae170ef9e58d8ca9b7ef42a08319a"
     },
     "labeling": {
       "Package": "labeling",

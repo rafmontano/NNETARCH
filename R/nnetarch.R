@@ -1,44 +1,36 @@
-#' Neural Network Autoregressive Model with Conditional Volatility
+#' NNETARCH: Neural Network Autoregressive Model with Conditional Volatility
 #'
-#' Fits a hybrid forecasting model that combines a nonlinear autoregressive model using a neural network (NNETAR) for the conditional mean with a second model for conditional volatility. The volatility component can be either a second NNETAR model or a GARCH-enhanced NNETAR model via the \pkg{rugarch} package.
+#' Fits the NNETARCH model—a hybrid framework combining a nonlinear autoregressive neural network (NNETAR)
+#' for trend forecasting with a second module that models conditional volatility through a log-variance function.
+#' Volatility estimation can be purely neural (Model 1) or GARCH-informed (Model 2).
 #'
-#' @param y A univariate time series of class \code{ts}.
-#' @param volatility Logical. If FALSE, only trend estimation is performed. Default is TRUE.
-#' @param volatility.model Character. "nnetar" for NNETAR residual volatility (Model 1), or "garch_nnetar" for GARCH-enhanced NNETAR modeling (Model 2). Default is "nnetar".
-#' @param garch.control A named list of parameters passed to \code{ugarchspec()} when using the \pkg{rugarch} volatility backend. Optional.
-#' @param ... Additional arguments passed to the underlying \code{\link[forecast]{nnetar}} function for trend modeling.
+#' @param y A univariate time series object of class \code{ts}.
+#' @param volatility Logical. If FALSE, only the trend component is fitted. Default is TRUE.
+#' @param volatility.model Either \code{"nnetar"} (Model 1: Fully Neural Volatility) or \code{"garch_nnetar"} (Model 2: GARCH-Informed Volatility).
+#' @param garch.control Optional. A named list of parameters passed to \code{rugarch::ugarchspec()} when using GARCH-based volatility modeling.
+#' @param ... Additional arguments passed to \code{\link[forecast]{nnetar}}.
 #'
-#' @return An object of class \code{"nnetarch"} containing:
+#' @return An object of class \code{"nnetarch"} with the following components:
 #' \describe{
-#'   \item{\code{trend_model}}{Fitted trend model from \code{nnetar()}}
-#'   \item{\code{vol_model}}{Fitted volatility model (either \code{nnetar} or GARCH-enhanced \code{nnetar})}
-#'   \item{\code{x}}{Original input series}
-#'   \item{\code{method}}{Description of the method used}
-#'   \item{\code{volatility_model_type}}{The volatility model used ("nnetar" or "garch_nnetar")}
-#'   \item{\code{call}}{The original function call}
+#'   \item{\code{trend_model}}{Fitted NNETAR model for the conditional mean \( f(\cdot) \)}
+#'   \item{\code{vol_model}}{Volatility model \( h(\cdot) \): either a second NNETAR or GARCH-enhanced neural model}
+#'   \item{\code{x}}{Original input time series}
+#'   \item{\code{method}}{String label: \code{"NNETARCH"}}
+#'   \item{\code{volatility_model_type}}{Type of volatility modeling used}
+#'   \item{\code{call}}{Original function call}
 #' }
 #'
 #' @details
-#' The NNETARCH model forecasts the trend using a neural network autoregression (\code{nnetar}). The residuals from this model are then used to estimate volatility through two alternatives:
+#' The trend \( f(\cdot) \) is estimated using a standard NNETAR model on lagged inputs. Residuals are then used to model log-variance \( h(\cdot) \):
 #' \itemize{
-#'   \item \strong{Model 1 (nnetar):} A second neural network is fitted to the squared residuals to model the variance dynamics.
-#'   \item \strong{Model 2 (garch_nnetar):} Conditional variances are first estimated using a GARCH(1,1) model, and these are then used alongside residuals to train a second neural network.
+#'   \item \strong{Model 1 ("nnetar")}: A second NNETAR is trained on squared residuals \( e_t^2 \) to estimate volatility.
+#'   \item \strong{Model 2 ("garch_nnetar")}: Conditional variances \( \hat{\sigma}^2_t \) from a GARCH(1,1) model are used alongside residuals as inputs to train a second NNETAR.
 #' }
-#' The final forecast is computed as:
+#' Forecasts are then synthesized as:
 #' \deqn{
-#' \hat{y}_{t+h} = f(y_{t-1}, \dots, y_{t-p}) + g(\cdot) \cdot \varepsilon_t
+#' y_{t+h} = f(y_{t-1}, ..., y_{t-p}) + \exp(0.5 \cdot h(\cdot)) \cdot \varepsilon_{t+h}, \quad \varepsilon_{t+h} \sim \mathcal{N}(0, 1)
 #' }
-#' where \eqn{\varepsilon_t \sim \mathcal{N}(0, 1)} is simulated white noise, and \eqn{g(\cdot)} is a learned function estimating the conditional standard deviation.
 #'
-#' @seealso \code{\link[forecast]{nnetar}}, \code{\link[forecast]{forecast}}, \code{\link[rugarch]{ugarchfit}}, \code{\link{forecast.nnetarch}}
-#'
-#' @examples
-#' library(forecast)
-#' fit <- nnetarch(lynx)
-#' plot(forecast(fit, h = 14))
-#'
-#' @importFrom forecast forecast
-#' @importFrom stats residuals
 #' @export
 nnetarch <- function(y, volatility = TRUE,
                      volatility.model = c("nnetar", "garch_nnetar"),
@@ -49,68 +41,57 @@ nnetarch <- function(y, volatility = TRUE,
 
   volatility.model <- match.arg(volatility.model)
 
-  # Step 1: Trend model using NNETAR
+  # Step 1: Trend Estimation using NNETAR
   trend_model <- forecast::nnetar(y, ...)
   residuals <- stats::residuals(trend_model)
-
-  # Step 2: Volatility model
   vol_model <- NULL
 
+  # Step 2: Volatility Estimation (Conditional Log-Variance)
   if (volatility) {
     if (volatility.model == "nnetar") {
-      # ✅ Original behavior
+      # Model 1: Fully Neural Volatility
       res_sq <- residuals^2
       res_sq <- res_sq[is.finite(res_sq)]
       vol_model <- forecast::nnetar(res_sq, ...)
 
     } else if (volatility.model == "garch_nnetar") {
-      # 🆕 New behavior: GARCH-enhanced NNETAR
+      # Model 2: GARCH-Informed Neural Volatility
       if (!requireNamespace("rugarch", quietly = TRUE)) {
-        stop("Package 'rugarch' must be installed for volatility.model = 'garch_nnetar'")
+        stop("Please install the 'rugarch' package to use GARCH-based volatility modeling.")
       }
 
-      if (is.null(garch.control)) {
-        garch_spec <- rugarch::ugarchspec(
+      garch_spec <- if (is.null(garch.control)) {
+        rugarch::ugarchspec(
           variance.model = list(garchOrder = c(1, 1)),
           mean.model = list(armaOrder = c(0, 0), include.mean = FALSE),
           distribution.model = "norm"
         )
       } else {
-        garch_spec <- do.call(rugarch::ugarchspec, garch.control)
+        do.call(rugarch::ugarchspec, garch.control)
       }
 
-      # 🛡️ Safely attempt to fit GARCH
+      residuals_clean <- na.omit(residuals)
       garch_fit <- tryCatch(
-        {
-          residuals_clean <- na.omit(residuals)
-          rugarch::ugarchfit(spec = garch_spec, data = residuals_clean)
-        },
+        rugarch::ugarchfit(spec = garch_spec, data = residuals_clean),
         error = function(e) {
           warning("GARCH fitting failed: ", e$message)
           return(NULL)
         }
       )
 
-      if (is.null(garch_fit)) {
-        warning("Proceeding without volatility modeling due to GARCH fitting failure.")
-        vol_model <- NULL
-      } else if (garch_fit@fit$convergence != 0) {
-        warning("GARCH fitting did not converge. Proceeding without volatility modeling.")
+      if (is.null(garch_fit) || garch_fit@fit$convergence != 0) {
+        warning("Proceeding without volatility modeling due to GARCH fitting issue.")
         vol_model <- NULL
       } else {
-        # ✅ GARCH fitted successfully
         garch_forecast <- rugarch::ugarchforecast(garch_fit, n.ahead = length(residuals_clean))
         garch_variances <- as.numeric(rugarch::sigma(garch_forecast))^2
-
-        # Input matrix: [residuals, garch variances]
         inputs_mat <- cbind(residuals_clean, garch_variances)
-
         vol_model <- forecast::nnetar(as.numeric(inputs_mat), ...)
       }
     }
   }
 
-  # Step 3: Return structure
+  # Step 3: Output Structured Object
   structure(list(
     method = "NNETARCH",
     x = y,
@@ -123,75 +104,66 @@ nnetarch <- function(y, volatility = TRUE,
 
 #' Forecast Method for NNETARCH Objects
 #'
-#' Generates forecasts from an object of class \code{nnetarch}, combining trend and volatility forecasts.
-#' The user may choose between forecast-style cumulative variance prediction intervals (default)
-#' and GARCH-style conditional variance intervals.
+#' Generates probabilistic forecasts from a fitted \code{nnetarch} model by combining a nonlinear trend forecast with an uncertainty term derived from a learned log-variance model. Supports both cumulative variance and per-step conditional variance prediction intervals.
 #'
 #' @param object An object of class \code{nnetarch}.
-#' @param h Number of steps ahead for forecasting.
-#' @param level Confidence levels for prediction intervals (numeric vector). Default is \code{c(80, 95)}.
-#' @param garch_confint Logical. If \code{TRUE}, uses GARCH-style prediction intervals based on conditional volatility.
-#'                       If \code{FALSE} (default), uses cumulative variance for prediction intervals as in ETS/ARIMA.
-#' @param ... Additional arguments passed to the underlying \code{forecast()} methods.
+#' @param h Number of forecast steps ahead.
+#' @param level Numeric vector of confidence levels for prediction intervals. Default is \code{c(80, 95)}.
+#' @param garch_confint Logical. If \code{TRUE}, prediction intervals use conditional variance (GARCH-style); if \code{FALSE}, intervals accumulate forecast variance over horizon. Default is \code{FALSE}.
+#' @param ... Additional arguments passed to the underlying \code{forecast()} calls.
 #'
-#' @return An object of class \code{forecast}, containing the forecast mean, intervals, and metadata.
-#'
-#' @examples
-#' \dontrun{
-#' fit <- nnetarch(y)
-#' forecast(fit, h = 12)  # default intervals
-#' forecast(fit, h = 12, garch_confint = TRUE)  # conditional variance intervals
-#' }
+#' @return An object of class \code{forecast}, including forecast means, prediction intervals, fitted values, and residuals.
 #'
 #' @method forecast nnetarch
 #' @export
+#' @importFrom stats residuals
 forecast.nnetarch <- function(object, h = 10, level = c(80, 95), garch_confint = FALSE, ...) {
-  # Step 1: If no volatility model, defer to trend model
-  if (is.null(object$vol_model)) {
-    return(forecast::forecast(object$trend_model, h = h, level = level, ...))
+  # Forecast trend
+  trend_fc <- forecast::forecast(object$trend_model, h = h, level = level, ...)
+  mean_fc <- as.numeric(trend_fc$mean)
+
+  # If no volatility model, return trend forecast
+  if (is.null(object$vol_model) && is.null(object$logvar_model)) {
+    return(trend_fc)
   }
 
-  # Step 2: Forecast the trend component
-  trend_fc <- forecast::forecast(object$trend_model, h = h, level = level, ...)
+  # Determine volatility model
+  vol_model <- if (!is.null(object$logvar_model)) object$logvar_model else object$vol_model
 
-  # Step 3: Forecast the volatility component
-  vol_fc <- forecast::forecast(object$vol_model, h = h, ...)
+  # Forecast log-variance (logvar_model) or variance (vol_model)
+  vol_fc <- forecast::forecast(vol_model, h = h, ...)
+  vol_raw <- as.numeric(vol_fc$mean)
 
-  # Step 4: Simulate normal noise and scale by volatility
+  # Convert to standard deviation
+  sigma <- if (!is.null(object$logvar_model)) sqrt(exp(vol_raw)) else sqrt(pmax(vol_raw, 1e-6))
+
+  # Generate noise
   set.seed(123)
-  epsilon <- rnorm(h, mean = 0, sd = 1)
-  vol_mean <- pmax(vol_fc$mean, 1e-6)  # prevent negatives
-  vol_term <- sqrt(vol_mean) * epsilon
-  vol_term_ts <- ts(vol_term, start = start(trend_fc$mean), frequency = frequency(trend_fc$mean))
+  epsilon <- rnorm(h)
+  vol_term <- sigma * epsilon
 
-  # Step 5: Combine trend and volatility
-  hybrid_mean <- ts(trend_fc$mean + vol_term_ts,
+  # Combine
+  hybrid_mean <- ts(mean_fc + vol_term,
                     start = start(trend_fc$mean),
                     frequency = frequency(trend_fc$mean))
 
-  # Step 6: Compute intervals
+  # Confidence intervals
   level <- sort(level)
   z_vals <- qnorm(1 - (1 - level / 100) / 2)
-  mean_fc <- as.numeric(trend_fc$mean)
 
   if (garch_confint) {
-    # Option 1: GARCH-style intervals (per-step conditional variance)
-    sigma <- sqrt(vol_mean)
     lower <- sapply(z_vals, function(z) mean_fc - z * sigma)
     upper <- sapply(z_vals, function(z) mean_fc + z * sigma)
   } else {
-    # Option 2: Forecast-style intervals (cumulative variance)
-    sigma_raw <- sqrt(vol_mean)
-    sigma_accum <- sqrt(cumsum(sigma_raw^2))  # like ETS/ARIMA
+    sigma_accum <- sqrt(cumsum(sigma^2))
     lower <- sapply(z_vals, function(z) mean_fc - z * sigma_accum)
     upper <- sapply(z_vals, function(z) mean_fc + z * sigma_accum)
   }
 
-  # Step 7: Convert to time series objects
   lower_ts <- ts(lower, start = start(trend_fc$mean), frequency = frequency(trend_fc$mean))
   upper_ts <- ts(upper, start = start(trend_fc$mean), frequency = frequency(trend_fc$mean))
 
-  # Step 8: Return forecast object
+  # Return forecast object
   structure(list(
     method = "NNETARCH",
     model = object,
@@ -201,6 +173,6 @@ forecast.nnetarch <- function(object, h = 10, level = c(80, 95), garch_confint =
     level = level,
     x = object$x,
     fitted = fitted(object$trend_model),
-    residuals = residuals(object$trend_model)
+    residuals = stats::residuals(object$trend_model)
   ), class = "forecast")
 }

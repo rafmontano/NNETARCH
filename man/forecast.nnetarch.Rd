@@ -9,28 +9,17 @@
 \arguments{
 \item{object}{An object of class \code{nnetarch}.}
 
-\item{h}{Number of steps ahead for forecasting.}
+\item{h}{Number of forecast steps ahead.}
 
-\item{level}{Confidence levels for prediction intervals (numeric vector). Default is \code{c(80, 95)}.}
+\item{level}{Numeric vector of confidence levels for prediction intervals. Default is \code{c(80, 95)}.}
 
-\item{garch_confint}{Logical. If \code{TRUE}, uses GARCH-style prediction intervals based on conditional volatility.
-If \code{FALSE} (default), uses cumulative variance for prediction intervals as in ETS/ARIMA.}
+\item{garch_confint}{Logical. If \code{TRUE}, prediction intervals use conditional variance (GARCH-style); if \code{FALSE}, intervals accumulate forecast variance over horizon. Default is \code{FALSE}.}
 
-\item{...}{Additional arguments passed to the underlying \code{forecast()} methods.}
+\item{...}{Additional arguments passed to the underlying \code{forecast()} calls.}
 }
 \value{
-An object of class \code{forecast}, containing the forecast mean, intervals, and metadata.
+An object of class \code{forecast}, including forecast means, prediction intervals, fitted values, and residuals.
 }
 \description{
-Generates forecasts from an object of class \code{nnetarch}, combining trend and volatility forecasts.
-The user may choose between forecast-style cumulative variance prediction intervals (default)
-and GARCH-style conditional variance intervals.
-}
-\examples{
-\dontrun{
-fit <- nnetarch(y)
-forecast(fit, h = 12)  # default intervals
-forecast(fit, h = 12, garch_confint = TRUE)  # conditional variance intervals
-}
-
+Generates probabilistic forecasts from a fitted \code{nnetarch} model by combining a nonlinear trend forecast with an uncertainty term derived from a learned log-variance model. Supports both cumulative variance and per-step conditional variance prediction intervals.
 }
